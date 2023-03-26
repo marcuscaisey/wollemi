@@ -12,6 +12,7 @@ func Bool(value bool) *bool { return &value }
 type Config struct {
 	Gofmt                     Gofmt             `json:"gofmt,omitempty"`
 	DefaultVisibility         string            `json:"default_visibility,omitempty"`
+	DefaultBuildFileName      string            `json:"default_build_file_name,omitempty"`
 	KnownDependency           map[string]string `json:"known_dependency,omitempty"`
 	AllowUnresolvedDependency *optional.Bool    `json:"allow_unresolved_dependency,omitempty"`
 	ExplicitSources           *optional.Bool    `json:"explicit_sources,omitempty"`
@@ -73,6 +74,10 @@ func (this Config) Merge(that Config) Config {
 
 	if that.DefaultVisibility != "" {
 		merge.DefaultVisibility = that.DefaultVisibility
+	}
+
+	if that.DefaultBuildFileName != "" {
+		merge.DefaultBuildFileName = that.DefaultBuildFileName
 	}
 
 	if len(this.KnownDependency) > 0 || len(that.KnownDependency) > 0 {

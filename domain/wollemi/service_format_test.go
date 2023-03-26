@@ -1691,6 +1691,129 @@ func (t *ServiceSuite) TestService_GoFormat() {
 				},
 			},
 		},
+	}, { // TEST_CASE ------------------------------------------------------------
+		Title: "manages build file names from .plzconfig",
+		Data: &GoFormatTestData{
+			Gosrc:          gosrc,
+			Gopkg:          gopkg,
+			BuildFileNames: []string{"build_file", "targets.plz"},
+			Paths:          []string{"app/server", "app/client"},
+			Parse: map[string]*please.BuildFile{
+				"app/server/build_file": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_binary", []please.Expr{
+							please.NewAssignExpr("=", "name", "server"),
+							please.NewAssignExpr("=", "srcs", []string{"server.go"}),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+				"app/client/targets.plz": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_binary", []please.Expr{
+							please.NewAssignExpr("=", "name", "client"),
+							please.NewAssignExpr("=", "srcs", []string{"client.go"}),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+			},
+			ImportDir: map[string]*golang.Package{
+				"app/server": {
+					GoFiles: []string{"server.go", "config.go"},
+					GoFileImports: map[string][]string{
+						"server.go": {"strings"},
+						"config.go": {"fmt"},
+					},
+				},
+				"app/client": {
+					GoFiles: []string{"client.go", "config.go"},
+					GoFileImports: map[string][]string{
+						"client.go": {"strings"},
+						"config.go": {"fmt"},
+					},
+				},
+			},
+			Write: map[string]*please.BuildFile{
+				"app/server/build_file": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_binary", []please.Expr{
+							please.NewAssignExpr("=", "name", "server"),
+							please.NewAssignExpr("=", "srcs", []string{"config.go", "server.go"}),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+				"app/client/targets.plz": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_binary", []please.Expr{
+							please.NewAssignExpr("=", "name", "client"),
+							please.NewAssignExpr("=", "srcs", []string{"client.go", "config.go"}),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+			},
+		},
+	}, { // TEST_CASE ------------------------------------------------------------
+		Title: "creates build file with first name from .plzconfig",
+		Data: &GoFormatTestData{
+			Gosrc:          gosrc,
+			Gopkg:          gopkg,
+			BuildFileNames: []string{"build_file", "targets.plz"},
+			Paths:          []string{"app/server", "app/client"},
+			ImportDir: map[string]*golang.Package{
+				"app/server": {
+					GoFiles: []string{"server.go"},
+					GoFileImports: map[string][]string{
+						"server.go": {"strings"},
+					},
+				},
+			},
+			Write: map[string]*please.BuildFile{
+				"app/server/build_file": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_library", []please.Expr{
+							please.NewAssignExpr("=", "name", "server"),
+							please.NewAssignExpr("=", "srcs", please.NewGlob([]string{"*.go"}, "*_test.go")),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+			},
+		},
+	}, { // TEST_CASE ------------------------------------------------------------
+		Title: "creates build file with configured default_build_file_name",
+		Data: &GoFormatTestData{
+			Gosrc:          gosrc,
+			Gopkg:          gopkg,
+			BuildFileNames: []string{"build_file", "targets.plz"},
+			Config: map[string]wollemi.Config{
+				"app/server": {
+					DefaultBuildFileName: "targets.plz",
+				},
+			},
+			Paths: []string{"app/server", "app/client"},
+			ImportDir: map[string]*golang.Package{
+				"app/server": {
+					GoFiles: []string{"server.go"},
+					GoFileImports: map[string][]string{
+						"server.go": {"strings"},
+					},
+				},
+			},
+			Write: map[string]*please.BuildFile{
+				"app/server/targets.plz": {
+					Stmt: []please.Expr{
+						please.NewCallExpr("go_library", []please.Expr{
+							please.NewAssignExpr("=", "name", "server"),
+							please.NewAssignExpr("=", "srcs", please.NewGlob([]string{"*.go"}, "*_test.go")),
+							please.NewAssignExpr("=", "visibility", []string{"PUBLIC"}),
+						}),
+					},
+				},
+			},
+		},
 	}} {
 		focus := ""
 
@@ -1711,7 +1834,13 @@ func (t *ServiceSuite) TestService_GoFormat() {
 			if tt.Data.Wd != "" {
 				wd = tt.Data.Wd
 			}
-			wollemi := t.New(root, wd, tt.Data.Gosrc, tt.Data.Gopkg)
+
+			var wollemi *wollemi.Service
+			if len(tt.Data.BuildFileNames) > 0 {
+				wollemi = t.NewWithBuildFileNames(root, wd, tt.Data.Gosrc, tt.Data.Gopkg, tt.Data.BuildFileNames)
+			} else {
+				wollemi = t.New(root, wd, tt.Data.Gosrc, tt.Data.Gopkg)
+			}
 
 			require.NoError(t, wollemi.GoFormat(tt.Config, tt.Data.Paths))
 			close(write)
@@ -1877,22 +2006,23 @@ func (t *ServiceSuite) MockGoFormat(data *GoFormatTestData, write chan please.Fi
 }
 
 type GoFormatTestData struct {
-	Gosrc     string
-	Gopkg     string
-	Root      string
-	Wd        string
-	Paths     []string
-	Config    map[string]wollemi.Config
-	ImportDir map[string]*golang.Package
-	IsGoroot  map[string]bool
-	Lstat     map[string]*FileInfo
-	Parse     map[string]*please.BuildFile
-	ParseErr  map[string]error
-	Stat      map[string]*FileInfo
-	Write     map[string]*please.BuildFile
-	Readlink  map[string]string
-	Walk      []string
-	Graph     *please.Graph
+	Gosrc          string
+	Gopkg          string
+	Root           string
+	Wd             string
+	Paths          []string
+	BuildFileNames []string
+	Config         map[string]wollemi.Config
+	ImportDir      map[string]*golang.Package
+	IsGoroot       map[string]bool
+	Lstat          map[string]*FileInfo
+	Parse          map[string]*please.BuildFile
+	ParseErr       map[string]error
+	Stat           map[string]*FileInfo
+	Write          map[string]*please.BuildFile
+	Readlink       map[string]string
+	Walk           []string
+	Graph          *please.Graph
 }
 
 // getFileImports gets combined list of imports from the provided files.

@@ -277,6 +277,26 @@ func TestConfig_Merge(t *testing.T) {
 				},
 			},
 		},
+	}, {
+		Name: "merged default_build_file_name is rhs when rhs set",
+		Lhs: wollemi.Config{
+			DefaultBuildFileName: "BUILD",
+		},
+		Rhs: wollemi.Config{
+			DefaultBuildFileName: "BUILD.plz",
+		},
+		Want: wollemi.Config{
+			DefaultBuildFileName: "BUILD.plz",
+		},
+	}, {
+		Name: "merged default_build_file_name is lhs when rhs unset",
+		Lhs: wollemi.Config{
+			DefaultBuildFileName: "BUILD",
+		},
+		Rhs: wollemi.Config{},
+		Want: wollemi.Config{
+			DefaultBuildFileName: "BUILD",
+		},
 	}} {
 		t.Run(tt.Name, func(t *testing.T) {
 			require.Equal(t, tt.Want, tt.Lhs.Merge(tt.Rhs))

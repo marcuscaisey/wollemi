@@ -70,6 +70,21 @@ func (suite *ServiceSuite) New(root, wd, gosrc, gopkg string) *wollemi.Service {
 		wd,
 		gosrc,
 		gopkg,
+		[]string{"BUILD.plz"},
+	)
+}
+
+func (suite *ServiceSuite) NewWithBuildFileNames(root, wd, gosrc, gopkg string, buildFileNames []string) *wollemi.Service {
+	return wollemi.New(
+		suite.logger,
+		suite.filesystem,
+		suite.golang,
+		suite.please,
+		root,
+		wd,
+		gosrc,
+		gopkg,
+		buildFileNames,
 	)
 }
 

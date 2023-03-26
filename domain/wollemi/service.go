@@ -27,29 +27,32 @@ func New(
 	wd string,
 	gosrc string,
 	gopkg string,
+	buildFileNames []string,
 ) *Service {
 	return &Service{
-		log:        log,
-		filesystem: filesystem,
-		golang:     golang,
-		please:     please,
-		root:       root,
-		wd:         wd,
-		gopkg:      gopkg,
-		gosrc:      gosrc,
+		log:            log,
+		filesystem:     filesystem,
+		golang:         golang,
+		please:         please,
+		root:           root,
+		wd:             wd,
+		gopkg:          gopkg,
+		gosrc:          gosrc,
+		buildFileNames: buildFileNames,
 	}
 }
 
 type Service struct {
-	log        logging.Logger
-	filesystem wollemi.Filesystem
-	golang     golang.Importer
-	please     please.Builder
-	config     wollemi.Config
-	root       string
-	wd         string
-	gosrc      string
-	gopkg      string
+	log            logging.Logger
+	filesystem     wollemi.Filesystem
+	golang         golang.Importer
+	please         please.Builder
+	config         wollemi.Config
+	root           string
+	wd             string
+	gosrc          string
+	gopkg          string
+	buildFileNames []string
 
 	goFormat *goFormat
 }
@@ -95,7 +98,7 @@ func (this *Service) FindBuildFile(dir string) (string, error) {
 
 	for _, info := range infos {
 		name := info.Name()
-		if isBuildFile(name) {
+		if this.isBuildFile(name) {
 			paths = append(paths, filepath.Join(dir, name))
 		}
 	}
@@ -143,7 +146,7 @@ func (this *Service) ReadDir(path string) (*Directory, error) {
 			continue
 		}
 
-		if isBuildFile(name) {
+		if this.isBuildFile(name) {
 			dir.BuildFiles = append(dir.BuildFiles, name)
 		}
 
@@ -237,7 +240,11 @@ func (this *Service) ParseDir(buf *bytes.Buffer, dir *Directory) *Directory {
 	var buildPath string
 
 	if len(dir.BuildFiles) == 0 {
-		buildPath = filepath.Join(dir.Path, BUILD_FILE)
+		buildFileName := this.filesystem.Config(dir.Path).Merge(this.config).DefaultBuildFileName
+		if buildFileName == "" {
+			buildFileName = this.buildFileNames[0]
+		}
+		buildPath = filepath.Join(dir.Path, buildFileName)
 	} else {
 		buildPath = filepath.Join(dir.Path, dir.BuildFiles[0])
 

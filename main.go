@@ -106,12 +106,19 @@ func (app *Application) Wollemi() (ctl.Wollemi, error) {
 
 	bazel := bazel.NewBuilder(log, pleaseCtl, filesystem)
 
+	var buildFileNames = config.Parse.BuildFileName
+	if len(buildFileNames) == 0 {
+		// These are the default values for the parse.buildfilename Please config option.
+		buildFileNames = []string{"BUILD", "BUILD.plz"}
+	}
+
 	log.WithField("working_directory", wd).
 		WithField("project_root", root).
 		WithField("go_package", gopkg).
 		WithField("go_path", golang.GOPATH()).
 		WithField("go_root", golang.GOROOT()).
+		WithField("build_file_names", buildFileNames).
 		Debug("wollemi initialized")
 
-	return wollemi.New(log, filesystem, golang, bazel, root, wd, gosrc, gopkg), nil
+	return wollemi.New(log, filesystem, golang, bazel, root, wd, gosrc, gopkg, buildFileNames), nil
 }

@@ -15,10 +15,6 @@ import (
 	"github.com/tcncloud/wollemi/ports/wollemi"
 )
 
-const (
-	BUILD_FILE = "BUILD.plz"
-)
-
 func newGoFormat(paths []string) *goFormat {
 	return &goFormat{
 		resolveLimiter: NewChanFunc(1, 0),

@@ -54,8 +54,8 @@ func nonBlockingSend(ch chan *Directory, dir *Directory) {
 	}
 }
 
-func isBuildFile(name string) bool {
-	for _, want := range []string{"BUILD.plz", "BUILD"} {
+func (this *Service) isBuildFile(name string) bool {
+	for _, want := range this.buildFileNames {
 		if name == want {
 			return true
 		}
